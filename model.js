@@ -1,5 +1,8 @@
-const express = require('express')
-const app = express()
+const Damage = require('leftovers-again/src/game/damage');
+const express = require('express');
+const util = require('leftovers-again/src/pokeutil.js');
+
+const app = express();
 
 var test = [];
 
@@ -10,43 +13,58 @@ app.listen(3000, () => console.log('Example app listening on port 3000!'))
 var temp;
 
 module.exports.model = class model {
+
     constructor(state) {
         this.self = state.self;
         this.opponent = state.opponent;
-        temp = state.self.reserve.filter((mon) => { if (mon.active) return true; })
-        this.myActive = temp;
-        this.opponentActive = state.opponent.reserve.filter((mon) => { if (mon.active) return true; });
+
+        temp = state.self.reserve.filter(mon => mon.active);
+        this.myActive = temp[0];
+
+        temp = state.opponent.reserve.filter(mon => mon.active);
+        this.opponentActive = temp[0];
 
         this.myTeam = state.self.reserve;
         this.opponentTeam = state.opponent.reserve;
-
-        this.myRemaining = state.self.reserve.filter((mon) => {
+        temp = state.self.reserve.filter((mon) => {
             if (mon.condition === '0 fnt') return false;
             if (mon.active) return false;
             if (mon.dead) return false;
             if (mon.disabled) return false;
             return true;
         });
+        this.myRemaining = temp;
 
-        this.opponentRemaining = state.opponent.reserve.filter((mon) => {
+        temp = state.opponent.reserve.filter((mon) => {
             if (mon.condition === '0 fnt') return false;
             if (mon.active) return false;
             if (mon.dead) return false;
             if (mon.disabled) return false;
             return true;
         });
+        this.opponentRemaining = temp;
 
-        this.myBestDamage = bestDamage(state, this.myActive, this.opponentActive);
-        /*        this.oppBestDamage = bestDamage(state, this.opponentActive, this.myActive);;
-                
-                this.myBestSwitch = bestSwitch(state, this.myRemaining, this.opponentActive);
-            */
-
-        console.log(Object.getOwnPropertyNames(this.myActive));
-        console.log(typeof this.myActive[0].id);
+        if (this.myActive && this.opponentActive) {
+            console.log("\nGetting My Best Damage Move");
+            this.myBestDamage = bestDamage(state, this.myActive, this.opponentActive);
+            console.log("\nGetting Opponent's Best Damage Move");
+            this.oppBestDamage = bestDamage(state, this.opponentActive, this.myActive);
+            console.log("\nAfter Best Damages");
+        }
+        console.log("test00");
+        if (this.myRemaining.length > 0) {
+            console.log("test01");
+            this.myBestSwitch = bestSwitch(state, this.myRemaining, this.opponentActive);
+            console.log("test02");
+        }
+        console.log("test04");
+        //        console.log(Array.isArray(this.myActive));
+        //        console.log(this.myActive.id);
     }
     print(model) {
         test.push("My Active: ", this.myActive, "\n");
+        test.push("Opponent's Active: ", this.opponentActive, "\n");
+
         //        test.push("Opponent's Active: ",this.opponentActive, "\n");
     }
 };
@@ -109,7 +127,15 @@ function bestDamage(state, attacker, defender) {
 
     try {
         if (attacker.moves) {
-            moves = attacker.moves.filter(move => !move.disabled);
+            if (typeof attacker.volatileStatus === undefined && attacker.volatileStatus.filter(x => { if (x == "lockedmove") return true; }) && attacker.prevMoves.length > 0) {
+                console.log("attacker.volatileStatus: ", attacker.volatileStatus);
+
+                console.log(attacker.volatileStatus.filter(x => { if (x == "lockedmove") return true; }));
+                console.log(attacker.prevMoves.length > 0);
+                moves = util.researchMoveById(attacker.prevMoves[0]);
+            } else {
+                moves = attacker.moves;
+            }
         } else if (attacker.seenMoves) {
             //moves = attacker.seenMoves;
             attacker.seenMoves.forEach(function(x) {
@@ -118,27 +144,41 @@ function bestDamage(state, attacker, defender) {
 
         } else if (!Array.isArray(moves) || !moves.length) { //Check if the array is defined and if it has length
             console.log("attacker: ", +attacker.id + " has no moves: undefined!");
-            return;
+            return null;
+        }
+        console.log("MOVES", moves);
+        console.log(typeof typeof moves.disabled === undefined);
+        if (typeof typeof moves.disabled === undefined) {
+            moves = moves.filter(move => move.disabled == false);
+            console.log("MOVES", moves.length);
+            moves.forEach(function(x) {
+                console.log("MOVES", moves.length);
+                console.log(x.id);
+            });
         }
 
-        console.log("attacker: " + attacker.id + " has no types, attempting to fix.");
-        util.researchPokemonById(attacker.id).types.forEach(function(x, i) {
-            attacker.types[i] = x;
-        });
         //    moves.forEach(function(x) { console.log(x.move); });
-        if (!Array.isArray(moves) || !moves.length) { console.log("ERROR in bestDamage, Skipping. moves:", moves); return; }
+        if (!Array.isArray(moves) || !moves.length) { /*console.log("ERROR in bestDamage, Skipping. moves:", moves);*/ return null; }
+
         moves.forEach(function(x) {
             util.researchPokemonById(attacker.id);
             if (!attacker.types) {
-
+                console.log("attacker: " + attacker.id + " has no types, attempting to fix.");
+                util.researchPokemonById(attacker.id).types.forEach(function(x, i) {
+                    attacker.types[i] = x;
+                });
             }
             if (!defender.types) {
                 console.log("defender: " + defender.id + " has no types, attempting to fix.");
+                util.researchPokemonById(defender.id).types.forEach(function(x, i) {
+                    attacker.types[i] = x;
+                });
             }
             var damage = Damage.getDamageResult(attacker, defender, x);
             /*console.log("damage: ", damage);
             console.log("damage[0]: " , damage);
             console.log("x.id: ", x.id);*/
+            //console.log("Damage from getDamageResult: ", damage);
             if (damage[0] > highest && damage[0] > 0) {
                 console.log("damage[0]: ", damage[0]);
                 highest = damage[0];
@@ -153,63 +193,62 @@ function bestDamage(state, attacker, defender) {
 }
 
 function bestSwitch(state, my, opponent) {
-    if (my === undefined) {
-        console.log("'my' is undefined in bestSwitch, skipped");
-        return;
-    }
-    if (opponent === undefined) {
-        console.log("'opp' is undefined in bestSwitch, skipped");
-        return;
-    } else {
-        console.log("opp ID: ", opponent.id);
-        console.log("Seen Opp Moves?: ", Array.isArray(opponent.seenMoves));
-        console.log("How many seen moves?: ", opponent.seenMoves.length);
-    }
+
+    //    console.log(my);
+    //    console.log(opponent);
+
+    console.log("opp ID: ", opponent.id);
+    //console.log("Seen Opp Moves?: ", Array.isArray(opponent.seenMoves));
+    console.log("How many seen moves?: ", opponent.seenMoves.length);
 
     if (opponent.seenMoves.length == 0) {
         console.log("opponent.seenMoves.length == 0: ", opponent.seenMoves.length == 0);
         console.log("No Best Switch Found");
         return undefined;
     }
-
+    console.log("test");
     var best;
     var minMaxDmg;
-    //    console.log(my);
-    var liveMon = my.filter((mon) => {
-        if (mon.condition === '0 fnt') return false;
-        if (mon.active) return false;
-        if (mon.dead) return false;
-        if (mon.disabled) return false;
-        return true;
-    });
-
-    //        console.log("liveMon",liveMon[0].id);
-
-    if (!Array.isArray(liveMon) || !liveMon.length) {
-        console.log(!Array.isArray(liveMon));
-        console.log(!liveMon.length);
+    console.log("test1");
+    if (!Array.isArray(my) || !my.length) {
         console.log("No PKMN to Switch to");
     } else {
-        console.log(!Array.isArray(liveMon));
-        console.log(!liveMon.length);
-        liveMon.forEach(function(x) {
+        console.log(!Array.isArray(my));
+        console.log(!my.length);
+        my.forEach(function(x) {
             var damage = bestDamage(state, opponent, x);
+            if (damage[1] == 0) { return; } //non damaging move?
+            //console.log("damage:", damage);
             console.log("Testing Move:", damage[0].id);
+            console.log("test5");
             console.log(x.id, "estimate of damage taken: ", damage[1], " - from:", damage[0].id);
+            console.log("test6");
             if (!best) {
+                console.log("test4");
                 console.log(x.id);
+                console.log("test7");
                 best = x;
                 minMaxDmg = damage[0];
+                console.log("test8");
             } else if (damage[1] < minMaxDmg) {
                 best = x;
+                console.log("test9");
                 minMaxDmg = damage[0];
+                console.log("test10");
             }
         });
     };
-    console.log("best: ", best.id);
-    return ([best, minMaxDmg]);
-}
 
+    if (best != null) {
+        console.log("test11");
+        console.log("best: ", best.id);
+        console.log("test12");
+        return ([best, minMaxDmg]);
+    } else {
+        return;
+    }
+}
+/*
 function getBestDamages(state) {
     console.log("Finding My Best Move");
     try {
@@ -229,7 +268,7 @@ function getBestDamages(state) {
         }
     } catch (e) { console.log(e); }
 }
-
+*/
 module.exports.getData = async function getData(state, model) {
     /*    try {
             console.log("\nGetting Best Damage Moves");
