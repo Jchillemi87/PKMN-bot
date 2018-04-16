@@ -51,9 +51,10 @@ module.exports.model = class model {
             this.oppBestDamage = bestDamage(state, this.opponentActive, this.myActive);
             console.log("\nAfter Best Damages");
         }
-        if (this.myRemaining.length > 0) {
-            this.myBestSwitch = bestSwitch(state, this.myRemaining, this.opponentActive);
-        }
+        	this.myBestSwitch = [null, null];
+        // if (this.myRemaining.length > 0) {
+        //     this.myBestSwitch = bestSwitch(state, this.myRemaining, this.opponentActive);
+        // }
     }
     print(model) {
         test.push("My Active: ", this.myActive, "\n");
@@ -120,10 +121,8 @@ function bestDamage(state, attacker, defender) {
 
 
     try {
-    	console.log("test001");
         if (attacker.moves) {
 
-    	console.log("test002");
             if (typeof attacker.volatileStatus === undefined && attacker.volatileStatus.filter(x => { if (x == "lockedmove") return true; }) && attacker.prevMoves.length > 0) {
                 console.log("attacker.volatileStatus: ", attacker.volatileStatus);
 
@@ -135,7 +134,6 @@ function bestDamage(state, attacker, defender) {
             }
         } else if (attacker.seenMoves) {
 
-    	console.log("test004");
             //moves = attacker.seenMoves;
             attacker.seenMoves.forEach(function(x) {
                 moves.push(util.researchMoveById(x));
@@ -143,24 +141,17 @@ function bestDamage(state, attacker, defender) {
 
         } else if (!Array.isArray(moves) || !moves.length) { //Check if the array is defined and if it has length
 
-    	console.log("test005");
             console.log("attacker: ", +attacker.id + " has no moves: undefined!");
-            return null;
+            return [null, null];
         }
+        console.log("MOVES: ", moves.length);
+        moves = moves.filter(move => {if(move.disabled == true) return false;	else return true;});
+        console.log("MOVES: ", moves.length);
+        moves.forEach(function(x) {
+            console.log("MOVE: ", x.id);
+        });
 
-    	console.log("test005");
-        console.log("MOVES", moves);
-        console.log(typeof moves.disabled === undefined);
-        if (typeof moves.disabled === undefined) {
-            moves = moves.filter(move => move.disabled == false);
-            console.log("MOVES", moves.length);
-            moves.forEach(function(x) {
-                console.log("MOVES", moves.length);
-                console.log(x.id);
-            });
-        }
-
-        if (!Array.isArray(moves) || !moves.length) { /*console.log("ERROR in bestDamage, Skipping. moves:", moves);*/ return null; }
+        if (!Array.isArray(moves) || !moves.length) { /*console.log("ERROR in bestDamage, Skipping. moves:", moves);*/ return [null, null]; }
 
         moves.forEach(function(x) {
             util.researchPokemonById(attacker.id);
@@ -199,45 +190,43 @@ function bestSwitch(state, my, opponent) {
     if (opponent.seenMoves.length == 0) {
         console.log("opponent.seenMoves.length == 0: ", opponent.seenMoves.length == 0);
         console.log("No Best Switch Found");
-        return undefined;
+        return [null, null];
     }
-    console.log("test");
-    var best;
-    var minMaxDmg;
-    console.log("test1");
+    var best = null;
+    var minMaxDmg = null;
     if (!Array.isArray(my) || !my.length) {
         console.log("No PKMN to Switch to");
     } else {
-        console.log(!Array.isArray(my));
-        console.log(!my.length);
+        console.log("!Array.isArray(my): ", !Array.isArray(my));
+        console.log("!my.length: ", !my.length);
         my.forEach(function(x) {
             var damage = bestDamage(state, opponent, x);
-            if (damage[1] == 0) { return; } //non damaging move?
-            //console.log("damage:", damage);
-            console.log("Testing Move:", damage[0].id);
-            console.log("test5");
-            console.log(x.id, "estimate of damage taken: ", damage[1], " - from:", damage[0].id);
-            console.log("test6");
-            if (!best) {
-                console.log("test4");
-                console.log(x.id);
-                console.log("test7");
-                best = x;
-                minMaxDmg = damage[0];
-                console.log("test8");
-            } else if (damage[1] < minMaxDmg) {
-                best = x;
-                console.log("test9");
-                minMaxDmg = damage[0];
-                console.log("test10");
+            console.log("TEST");
+            if (typeof damage[0] !== undefined) {
+                console.log(damage);
+                if (damage[1] == 0) {
+                    return;
+                } //non damaging move?}
+                else {
+                    //console.log("damage:", damage);
+                    console.log("Testing Move:", damage[0].id);
+                    console.log(x.id, "estimate of damage taken: ", damage[1], " - from:", damage[0].id);
+                    if (best == null) {
+                        console.log(x.id);
+                        best = x;
+                        minMaxDmg = damage[1];
+                    } else if (damage[1] < minMaxDmg) {
+                        best = x;
+                        minMaxDmg = damage[1];
+                    }
+                }
             }
+            console.log("test02");
         });
     };
 
     if (best != null) {
-        console.log("test11");
         console.log("best: ", best.id);
-        console.log("test12");
         return ([best, minMaxDmg]);
     } else {
         return;
