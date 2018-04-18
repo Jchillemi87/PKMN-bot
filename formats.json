@@ -3233,7 +3233,9 @@
         "randomBattleMoves": ["kingsshield", "swordsdance", "shadowclaw", "sacredsword", "ironhead", "shadowsneak", "hiddenpowerice", "shadowball", "flashcannon"]
     },
     "aegislashblade":
-    {},
+    {
+        "randomBattleMoves": ["kingsshield", "swordsdance", "shadowclaw", "sacredsword", "ironhead", "shadowsneak", "hiddenpowerice", "shadowball", "flashcannon"]
+    },
     "spritzee":
     {
         "randomBattleMoves": ["calmmind", "drainingkiss", "moonblast", "psychic", "aromatherapy", "wish", "trickroom", "thunderbolt"]
@@ -3519,12 +3521,18 @@
     {
         "randomBattleMoves": ["bulkup", "stoneedge", "stealthrock", "suckerpunch", "swordsdance", "firefang", "rockclimb"]
     },
+    "lycanrocdusk":
+    {
+        "randomBattleMoves": ["swordsdance", "accelerock", "stoneedge", "drillrun", "firefang", "return"]
+    },
     "wishiwashi":
     {
         "randomBattleMoves": ["scald", "hydropump", "icebeam", "hiddenpowergrass", "earthquake"]
     },
     "wishiwashischool":
-    {},
+    {
+        "randomBattleMoves": ["scald", "hydropump", "icebeam", "hiddenpowergrass", "earthquake"]
+    },
     "mareanie":
     {},
     "toxapex":
@@ -3800,13 +3808,15 @@
     {
         "randomBattleMoves": ["calmmind", "photongeyser", "darkpulse", "moonlight", "stealthrock", "storedpower"]
     },
-    "necrozmaduskmane": {
+    "necrozmaduskmane":
+    {
         "randomBattleMoves": ["swordsdance", "sunsteelstrike", "photongeyser", "earthquake", "knockoff", "autotomize"]
     },
-    "necrozmadawnwings": {
+    "necrozmadawnwings":
+    {
         "randomBattleMoves": ["calmmind", "moongeistbeam", "photongeyser", "heatwave", "powergem", "trickroom"]
     },
-    "necrozmaultra": 
+    "necrozmaultra":
     {},
     "magearna":
     {
@@ -3815,6 +3825,22 @@
     "marshadow":
     {
         "randomBattleMoves": ["spectralthief", "closecombat", "stoneedge", "shadowsneak", "icepunch"]
+    },
+    "naganadel":
+    {
+        "randomBattleMoves": ["nastyplot", "dragonpulse", "sludgewave", "fireblast", "dracometeor", "uturn"]
+    },
+    "stakataka":
+    {
+        "randomBattleMoves": ["gyroball", "stoneedge", "trickroom", "earthquake", "superpower", "stealthrock"]
+    },
+    "blacephalon":
+    {
+        "randomBattleMoves": ["mindblown", "fireblast", "shadowball", "hiddenpowerice", "trick", "willowisp", "calmmind"]
+    },
+    "zeraora":
+    {
+        "randomBattleMoves": ["plasmafists", "closecombat", "voltswitch", "hiddenpowerice", "knockoff", "grassknot", "workup"]
     },
     "missingno":
     {
