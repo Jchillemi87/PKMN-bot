@@ -42,7 +42,11 @@ function useRandom(state) {
 
 
 async function decide(state) {
-    return new Model.model(state);
+    try{
+        return new Model.model(state);}
+        catch(e){
+            console.log("ERROR in async decide: ",e);
+        }
 }
 
 class Terminator {
@@ -57,25 +61,30 @@ class Terminator {
      */
     decide(state) {
         return decide(state).then(function(model) {
-
-            if (typeof model.myBestSwitch !== undefined && model.myBestSwitch[0] != null) {
-                console.log("My Best Switch: ", model.myBestSwitch[0].id, "Max Damage Taken: ", model.myBestSwitch[1]);
+try{
+            if (model.myDefSwitch !== undefined && model.myDefSwitch[0] != null) {
+                console.log("My Best Defensive Switch: ", model.myDefSwitch[0].id, "Max Damage Taken: ", model.myDefSwitch[1]);
                 if (state.forceSwitch || state.teamPreview) {
-                    if (model.myBestSwitch[0] != null) { return new SWITCH(model.myBestSwitch[0]); } else { return useRandom(state); }
+                    if (model.myDefSwitch[0] != null) { return new SWITCH(model.myDefSwitch[0]); } else { return useRandom(state); }
                 }
             }
 
-            if (typeof model.oppBestDamage !== undefined && typeof model.oppBestDamage[0] !== undefined && model.oppBestDamage[0] != null) {
-                console.log("Opponent's Best Damage Move: ", model.oppBestDamage[0].id, ": ", model.oppBestDamage[1]);
+            if (model.opponent.bestDamage !== undefined && model.opponent.bestDamage[0] !== undefined && model.opponent.bestDamage[0] != null) {
+                console.log("Opponent's Best Damage Move: ", model.opponent.bestDamage[0].id, ": ", model.opponent.bestDamage[1]);
+                //console.log("model.myDefSwitch[0]: ",model.myDefSwitch);
+                if(model.myDefSwitch[1] && model.opponent.bestDamage[1] > model.myDefSwitch[1]*2){
+                    { return new SWITCH(model.myDefSwitch[0]); }
+                }
             }
 
 
-            if (typeof model.myBestDamage !== undefined && model.myBestDamage[0] != null) {
+            if (model.myBestDamage !== undefined && model.myBestDamage[0] != null) {
                 console.log("My Best Damage Move: ", model.myBestDamage[0].id, ": ", model.myBestDamage[1]);
                 return new MOVE(model.myBestDamage[0].id);
             }
 
-            return useRandom(state);
+            return useRandom(state);}
+             catch (e) {console.log("ERROR in decide: ",e);}
 
 
         }).catch(function(e) {
