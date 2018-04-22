@@ -1748,7 +1748,9 @@
         "randomBattleMoves": ["recover", "scald", "toxic", "icebeam", "dragontail", "rest", "sleeptalk"]
     },
     "castform":
-    {},
+    {
+        "randomBattleMoves": ["weatherball"]
+    },
     "castformsunny":
     {
         "randomBattleMoves": ["sunnyday", "weatherball", "solarbeam", "icebeam"]
@@ -2640,7 +2642,7 @@
     {
         "randomBattleMoves": ["waterfall", "aquajet", "superpower", "crunch", "headsmash"]
     },
-    "basculinbluestriped":
+    "basculinbluestripe":
     {
         "randomBattleMoves": ["waterfall", "aquajet", "superpower", "crunch", "headsmash"]
     },
@@ -3707,7 +3709,9 @@
         "randomBattleMoves": ["shellsmash", "powergem", "acrobatics", "earthquake"]
     },
     "miniormeteor":
-    {},
+    {
+        "randomBattleMoves": ["shellsmash", "powergem", "acrobatics", "earthquake"]
+    },
     "komala":
     {
         "randomBattleMoves": ["return", "suckerpunch", "woodhammer", "earthquake", "playrough", "uturn"]

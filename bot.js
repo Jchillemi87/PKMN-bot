@@ -1,4 +1,5 @@
 const Model = require('./model.js');
+const chalk = require('chalk');
 
 /**
  * Terminator
@@ -15,7 +16,7 @@ function pickOne(arr) {
  * picks randomly from valid moves on its turn.
  */
 function useRandom(state) {
-    console.error("SOMETHING WENT WRONG, MAKING A RANDOM MOVE");
+    console.error(chalk.red("SOMETHING WENT WRONG, MAKING A RANDOM MOVE"));
 
     if (state.forceSwitch || state.teamPreview) {
         // our pokemon died :(
@@ -42,11 +43,11 @@ function useRandom(state) {
 
 
 async function decide(state) {
-    try{
-        return new Model.model(state);}
-        catch(e){
-            console.log("ERROR in async decide: ",e);
-        }
+    try {
+        return new Model.model(state);
+    } catch (e) {
+        console.log("ERROR in async decide: ", e);
+    }
 }
 
 class Terminator {
@@ -61,30 +62,35 @@ class Terminator {
      */
     decide(state) {
         return decide(state).then(function(model) {
-try{
-            if (model.myDefSwitch !== undefined && model.myDefSwitch[0] != null) {
-                console.log("My Best Defensive Switch: ", model.myDefSwitch[0].id, "Max Damage Taken: ", model.myDefSwitch[1]);
-                if (state.forceSwitch || state.teamPreview) {
-                    if (model.myDefSwitch[0] != null) { return new SWITCH(model.myDefSwitch[0]); } else { return useRandom(state); }
+            try {
+                if (model.myDefSwitch !== undefined && model.myDefSwitch[0] != null) {
+                    console.log("My Best Defensive Switch: ", model.myDefSwitch[0].id, "Max Damage Taken: ", model.myDefSwitch[1]);
+                    if (state.forceSwitch || state.teamPreview) {
+                        if (model.myDefSwitch !== undefined && model.myDefSwitch[0] != null) {
+                            return new SWITCH(model.myDefSwitch[0]);
+                        } else {
+                            console.log(chalk.green("BUG?"));
+                            return useRandom(state);
+                        }
+                    }
                 }
-            }
 
-            if (model.opponent.bestDamage !== undefined && model.opponent.bestDamage[0] !== undefined && model.opponent.bestDamage[0] != null) {
-                console.log("Opponent's Best Damage Move: ", model.opponent.bestDamage[0].id, ": ", model.opponent.bestDamage[1]);
-                //console.log("model.myDefSwitch[0]: ",model.myDefSwitch);
-                if(model.myDefSwitch[1] && model.opponent.bestDamage[1] > model.myDefSwitch[1]*2){
-                    { return new SWITCH(model.myDefSwitch[0]); }
+                if (model.opponent.bestDamage !== undefined && model.opponent.bestDamage[0] !== undefined && model.opponent.bestDamage[0] != null) {
+                    console.log("Opponent's Best Damage Move: ", model.opponent.bestDamage[0].id, ": ", model.opponent.bestDamage[1]);
+                    //console.log("model.myDefSwitch[0]: ",model.myDefSwitch);
+                    if (model.myDefSwitch[1] && model.opponent.bestDamage[1] > model.myDefSwitch[1] * 2) {
+                        return new SWITCH(model.myDefSwitch[0]);
+                    }
                 }
-            }
 
 
-            if (model.myBestDamage !== undefined && model.myBestDamage[0] != null) {
-                console.log("My Best Damage Move: ", model.myBestDamage[0].id, ": ", model.myBestDamage[1]);
-                return new MOVE(model.myBestDamage[0].id);
-            }
+                if (model.myBestDamage !== undefined && model.myBestDamage[0] != null) {
+                    console.log("My Best Damage Move: ", model.myBestDamage[0].id, ": ", model.myBestDamage[1]);
+                    return new MOVE(model.myBestDamage[0].id);
+                }
 
-            return useRandom(state);}
-             catch (e) {console.log("ERROR in decide: ",e);}
+                return useRandom(state);
+            } catch (e) { console.log("ERROR in decide: ", e); }
 
 
         }).catch(function(e) {
