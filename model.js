@@ -14,6 +14,25 @@ app.listen(3000, () => console.log('Example app listening on port 3000!'))
 
 var temp;
 
+function status2Binary(status) {
+    switch (status) {
+        case "brn":
+            return [0, 0, 1];
+        case "frz":
+            return [0, 1, 0];
+        case "par":
+            return [0, 1, 1];
+        case "psn":
+            return [1, 0, 0];
+        case "slp":
+            return [1, 0, 1];
+        case "tox":
+            return [1, 1, 0];
+        default:
+            return [0, 0, 0];
+    }
+}
+
 module.exports.model = class model {
 
     constructor(state) {
@@ -31,7 +50,7 @@ module.exports.model = class model {
 
             console.log("Opponent's HP: ", this.opponentActive.hp, "/", this.opponentActive.maxhp);
 
-            console.log("getFinalSpeed(this.opponentActive,state.weather): ", getFinalSpeed(this.opponentActive, state.weather));
+            //            console.log("getFinalSpeed(this.opponentActive,state.weather): ", getFinalSpeed(this.opponentActive, state.weather));
 
             this.myTeam = state.self.reserve;
             this.opponentTeam = state.opponent.reserve;
@@ -56,19 +75,28 @@ module.exports.model = class model {
                 });
             }
 
-            console.log(this.opponentActive);
+            //            console.log(this.opponentActive);
+
+
+            if (this.myActive != 0 && this.myActive.boostedStats === undefined) {
+                console.log(chalk.red("----"), this.myActive);
+                this.myActive.boostedStats = {};
+                this.myActive.boostedStats.spe = 1;
+                this.myActive.boostedStats.spe = getFinalSpeed(this.myActive, state.weather);
+            }
+
+            if (this.opponentActive != 0 && this.opponentActive.boostedStats === undefined) {
+                this.opponentActive.boostedStats = {};
+                this.opponentActive.boostedStats.spe = 1;
+                this.opponentActive.boostedStats.spe = getFinalSpeed(this.opponentActive, state.weather);
+            }
 
             if (this.opponentActive) {
-                if (this.opponentActive.boostedStats === undefined) {
-                    this.opponentActive.boostedStats = {};
-                    this.opponentActive.boostedStats.spe = 1;
-                }
-                this.opponentActive.boostedStats.spe = getFinalSpeed(this.opponentActive, state.weather);
 
-                this.opponent.preMoves = formats[this.opponentActive.id].randomBattleMoves;
+                this.opponentActive.preMoves = formats[this.opponentActive.id].randomBattleMoves;
 
                 console.log("\nGetting Opponent's Best Damage Move");
-                this.opponent.bestDamage = bestDamage(state, this.opponentActive, this.myActive, this.opponent.preMoves);
+                this.opponentActive.bestDamage = bestDamage(state, this.opponentActive, this.myActive, this.opponentActive.preMoves);
             }
 
             if (this.myActive != 0 && this.opponentActive) {
@@ -79,9 +107,10 @@ module.exports.model = class model {
                 }
 
                 console.log("\nGetting My Best Damage Move");
-                this.myBestDamage = bestDamage(state, this.myActive, this.opponentActive);
-                console.log(this.myBestDamage);
-
+                this.myActive.bestDamage = bestDamage(state, this.myActive, this.opponentActive);
+                if (this.myActive.bestDamage !== undefined) {
+                    console.log(this.myActive.bestDamage.id);
+                }
                 console.log("\nGetting All Possible Damage Moves for Opponent: ", this.opponentActive.id, ":\n", formats[this.opponentActive.id].randomBattleMoves);
 
                 //                console.log(duelSim(state, this.myActive, this.opponentActive, this.opponent.preMoves));
@@ -89,25 +118,72 @@ module.exports.model = class model {
                 /*console.log("this.myActive.perfAcc: ",this.myActive.perfAcc);
                 console.log("this.opponentActive.perfAcc: ",this.opponentActive.perfAcc);*/
 
-                console.log("\nAfter Best Damages");
+                console.log("\nAfter Best Damages\n");
             }
-
-            this.myDefSwitch = [null, null];
             if (this.myRemaining.length > 0) {
-                this.myDefSwitch = bestDefSwitch(state, this.myRemaining, this.opponentActive, this.opponent.preMoves);
-            }
+                this.myDefSwitch = null;
+                console.log("\n");
+                this.myDefSwitch = bestDefSwitch(state, this.myRemaining, this.opponentActive, this.opponentActive.preMoves);
 
-            this.myOffSwitch = [null,null];
+                this.myOffSwitch = null;
+                console.log("\n");
+                this.myOffSwitch = bestOffSwitch(state, this.myRemaining, this.opponentActive, this.opponentActive.preMoves);
+            }
 
         } catch (e) { console.log("ERROR: ", e); }
     }
-    print(model) {
+
+    print() {
         test.push("My Active: ", this.myActive, "\n");
         test.push("Opponent's Active: ", this.opponentActive, "\n");
 
         //        test.push("Opponent's Active: ",this.opponentActive, "\n");
     }
+
+    getData(state) {
+        var prioMovesDmg;
+
+        if (this.myActive.prioMoves === undefined) {
+            this.myActive.prioMoves = {};
+            this.myActive.prioMoves.totalDamage = 0;
+        }
+
+        if (this.myActive.bestDamage === undefined) {
+            this.myActive.bestDamage = {};
+            this.myActive.bestDamage.totalDamage = 0;
+        }
+
+        if (this.opponentActive.bestDamage === undefined) {
+            this.opponentActive.bestDamage = {};
+        }
+
+        if (this.opponentActive.bestDamage.totalDamage === undefined) {
+
+            this.opponentActive.bestDamage.totalDamage = [];
+            this.opponentActive.bestDamage.totalDamage[14] = 0;
+        }
+        
+        if (isNaN(this.myActive.prioMoves.totalDamage / this.opponentActive.hp)) {
+            prioMovesDmg = 0;
+        } else {
+            prioMovesDmg = this.myActive.prioMoves.totalDamage / this.opponentActive.hp;
+        }
+
+//        console.log(this.myActive);
+
+        var data = [this.myActive.hp];
+        data = data.concat(status2Binary(this.myActive.statuses));
+        data = data.concat([this.isFaster,
+            this.myActive.bestDamage.totalDamage[0] / this.opponentActive.hp,
+            prioMovesDmg,
+            this.opponentActive.bestDamage.totalDamage[14] / this.myActive.hp
+        ]);
+
+        return data;
+    }
 };
+
+
 
 //HP = ((Base * 2 + IV + EV/4) * Level / 100) + Level + 10 **MAX IS BLISSY AT 714**
 function calcHP(mon, ev = 84, iv = 31) {
@@ -177,7 +253,7 @@ function bestDamage(state, attacker, defender, preMoves) {
     }
 
 
-    var highest = 0;
+    var highest = [0];
     var move;
     var moves = [];
 
@@ -189,7 +265,7 @@ function bestDamage(state, attacker, defender, preMoves) {
 
                 console.log(attacker.volatileStatus.filter(x => { if (x == "lockedmove") return true; }));
                 console.log(attacker.prevMoves.length > 0);*/
-                moves = util.researchMoveById(attacker.prevMoves[0]);
+                moves = util.researchMoveById(attacker.prevMoves);
             } else {
                 moves = attacker.moves;
             }
@@ -210,7 +286,7 @@ function bestDamage(state, attacker, defender, preMoves) {
         moves = moveLockCheck(moves);
 
 
-        if (!Array.isArray(moves) || !moves.length) { console.log("ERROR in bestDamage, Skipping. moves:", moves); return [null, null]; }
+        if (!Array.isArray(moves) || !moves.length) { console.log("ERROR in bestDamage, Skipping. moves:", moves); return null; }
 
 
         if (!attacker.types) {
@@ -232,14 +308,15 @@ function bestDamage(state, attacker, defender, preMoves) {
         moves.some(function(x) {
             if (x.name == 'Fake Out' && attacker.prevMoves.length === 0 && defender.types.indexOf('Ghost') === -1 && !checkForAbility(defender.abilities, "Inner Focus") && !checkForAbility(defender.abilities, "Shield Dust")) {
                 useFakeOut = true;
-                highest = Damage.getDamageResult(attacker, defender, x)[0];
+                highest = Damage.getDamageResult(attacker, defender, x);
                 move = x;
                 return true;
             }
         });
 
         if (useFakeOut) {
-            return [move, highest];
+            move.totalDamage = highest;
+            return move;
         }
         ///////////////////////////////////////////////////
 
@@ -251,35 +328,46 @@ function bestDamage(state, attacker, defender, preMoves) {
             var damage = Damage.getDamageResult(attacker, defender, x);
 
             if (x.priority !== undefined && x.priority > 0) {
-                attacker.prioMoves.push([x, damage[0]]);
+                x.totalDamage = damage;
+                attacker.prioMoves.push(x);
             }
 
             if (x.accuracy === true || x.accuracy == 100) {
-                attacker.perfAcc.push([x, damage[0]]);
+                x.totalDamage = damage;
+                attacker.perfAcc.push(x);
             } else {
-                attacker.flawedAcc.push([x, damage[0]]);
+                x.totalDamage = damage;
+                attacker.flawedAcc.push(x);
             }
+				console.log(x.id," damage: ", damage[0]);
+				if(move !== undefined)
+				console.log(move.id," damage: ", highest[0],"\n");
 
+            if (damage[0] > highest[0] && damage[0] > 0) {
 
-            if (damage[0] > highest && damage[0] > 0) {
-                //                console.log("damage[0]: ", damage[0]);
-                highest = damage[0];
+                highest = damage;
                 move = x;
             }
         });
+
+        if (attacker.prioMoves.id !== undefined) {
+            console.log("Priority Move: ", attacker.prioMoves.id, " Damage: ", attacker.prioMoves.totalDamage);
+        }
+
         /*
                 console.log("prioMoves: ", prioMoves);
                 console.log("perfAcc: ", perfAcc);
                 console.log("flawedAcc: ", flawedAcc);
         */
 
-        if (attacker.boostedStats === undefined) {
+        if (attacker != 0 && attacker.boostedStats === undefined) {
+            console.log(chalk.red("----"), attacker);
             attacker.boostedStats = {};
             attacker.boostedStats.spe = 1;
             attacker.boostedStats.spe = getFinalSpeed(attacker, state.weather);
         }
 
-        if (defender.boostedStats === undefined) {
+        if (defender != 0 && defender.boostedStats === undefined) {
             defender.boostedStats = {};
             defender.boostedStats.spe = 1;
             defender.boostedStats.spe = getFinalSpeed(defender, state.weather);
@@ -290,8 +378,8 @@ function bestDamage(state, attacker, defender, preMoves) {
 
             if (attacker.prioMoves !== undefined && attacker.prioMoves.length && defender.prioMoves !== undefined && defender.prioMoves.length) {
                 attacker.prioMoves.forEach(function(x) {
-                    if (x[1] > defender.hp) {
-                        console.log(chalk.green(x[0].id, "will KO ", defender.id, " HP myRemaining: ", defender.hp));
+                    if (x.totalDamage > defender.hp) {
+                        console.log(chalk.blue(attacker.id, ": "), chalk.blue(x.id, "will KO ", defender.id, " HP myRemaining: ", defender.hp));
                         bestOption = x;
                     }
                 });
@@ -299,8 +387,8 @@ function bestDamage(state, attacker, defender, preMoves) {
 
             if (attacker.perfAcc.length && bestOption == null) {
                 attacker.perfAcc.forEach(function(x) {
-                    if (x[1] > defender.hp) {
-                        console.log(chalk.green(x[0].id, "will KO ", defender.id, " HP myRemaining: ", defender.hp));
+                    if (x.totalDamage > defender.hp) {
+                        console.log(chalk.blue(attacker.id, ": "), chalk.blue(x.id, "will KO ", defender.id, " HP myRemaining: ", defender.hp));
                         bestOption = x;
                     }
                 });
@@ -308,19 +396,22 @@ function bestDamage(state, attacker, defender, preMoves) {
 
             if (attacker.flawedAcc.length && bestOption == null) {
                 attacker.flawedAcc.forEach(function(x) {
-                    if (x[1] > defender.hp) {
-                        console.log(chalk.green(x[0].id, "will KO ", defender.id, " HP myRemaining: ", defender.hp));
+                    if (x.totalDamage > defender.hp) {
+                        console.log(chalk.blue(attacker.id, ": "), chalk.blue(x.id, "will KO ", defender.id, " HP myRemaining: ", defender.hp));
                         bestOption = x;
                     }
                 });
             }
             if (bestOption != null) {
-                console.log(chalk.cyan("BEST OPTION: "), chalk.cyan(bestOption[0].id), chalk.cyan(bestOption[1]));
+                console.log(chalk.cyan("BEST OPTION: "), chalk.cyan(bestOption.id), chalk.cyan(bestOption.totalDamage), "\n");
                 return bestOption;
             }
         }
 
-        return [move, highest];
+        if (move !== undefined) {
+            move.totalDamage = highest;
+            return move;
+        }
     } catch (e) {
         console.log("Caught ERROR IN bestDamage(): ", e);
         console.dir(state);
@@ -339,28 +430,54 @@ function checkForAbility(abilities, x) {
     return false;
 }
 
+function bestOffSwitch(state, my, opponent, preMoves) {
+    var best = null;
+    var maxDmg = 0;
+    var damage = [];
+
+    my.forEach(function(x) { //what about priority moves?
+        console.log(x.id, ": ", x.boostedStats.spe, " < ", opponent.id, ": ", opponent.boostedStats.spe, " = ", x.boostedStats.spe < opponent.boostedStats.spe);
+        if (x.boostedStats.spe < opponent.boostedStats.spe) { //what if we're speed tied?
+            return;
+        }
+
+        damage = bestDamage(state, x, opponent, preMoves);
+        if (damage !== undefined && damage.totalDamage != null) {
+            console.log(x.id, ": ", damage.id, ": ", damage.totalDamage[0], "damage vs hp: ", opponent.hp);
+            if (damage.totalDamage[0] >= opponent.hp && damage.totalDamage[0] > maxDmg[0]) {
+                best = x;
+                maxDmg = damage.totalDamage;
+            }
+        }
+    });
+
+    if (best != null) {
+        console.log(chalk.green("best myOffSwitch: "), best.id, "damage: ", maxDmg);
+        best.maxDmg = maxDmg;
+        return (best);
+    } else {
+        return null;
+    }
+
+}
+
+
 function bestDefSwitch(state, my, opponent, preMoves) {
 
     console.log("opp ID: ", opponent.id);
-    //console.log("Seen Opp Moves?: ", Array.isArray(opponent.seenMoves));
-    console.log("opponent.seenMoves.length: ", opponent.seenMoves.length);
-    /*
-        if (opponent.seenMoves.length == 0) {
-            console.log("No Best Switch Found");
-            return [null, null];
-        }*/
+    console.log("opponent.seenMoves.length: ", opponent.seenMoves.length, "\n");
 
     var best = null;
     var minMaxDmg = 9999;
-    var damage = [null, 0];
+    var damage = [];
 
     my.forEach(function(x) {
-        /*console.log("testing x.id: ", x.id, " vs ", opponent.id);
-        console.log("testing premoves: ", preMoves);*/
+        console.log("--------------\n", x.id, " vs ", opponent.id);
+        //console.log("testing premoves: ", preMoves);
         damage = bestDamage(state, opponent, x, preMoves);
         //        console.log(chalk.blue("--------------------------------"));
         //console.log("damage: ", damage);
-        if (typeof damage !== undefined && damage[1] != null) {
+        if (damage !== undefined && damage.totalDamage != null) {
             //console.log(damage);
             /*  if (damage[1] == 0) {
                   return null;
@@ -372,20 +489,21 @@ function bestDefSwitch(state, my, opponent, preMoves) {
             if (best == null) {
                 //                    console.log(x.id);
                 best = x;
-                minMaxDmg = damage[1];
-            } else if (damage[1] < minMaxDmg) {
+                minMaxDmg = damage.totalDamage;
+            } else if (damage.totalDamage[15] < minMaxDmg[15]) {
                 best = x;
-                minMaxDmg = damage[1];
+                minMaxDmg = damage.totalDamage;
             }
             //    }
         }
     });
 
     if (best != null) {
-        //        console.log("best: ", best.id);
-        return ([best, minMaxDmg]);
+        best.minMaxDmg = minMaxDmg;
+        console.log("best myDefSwitch: ", best.id, "minMaxDmg: ", best.minMaxDmg[0], " - " ,best.minMaxDmg[15]);
+        return (best);
     } else {
-        return [null, 0];
+        return null;
     }
 }
 

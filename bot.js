@@ -1,11 +1,36 @@
-const Model = require('./model.js');
-const chalk = require('chalk');
-
+const AI = require('@la/ai');
+const { MOVE, SWITCH } = require('@la/decisions');
+//const Team = require('@la/team');
 /**
  * Terminator
  *
  */
-const { MOVE, SWITCH } = require('leftovers-again/src/decisions');
+const Model = require('./model.js');
+const chalk = require('chalk');
+
+const rt = require('./../../Pokemon-Showdown/data/random-teams.js');
+const RT = new rt;
+
+var initTeam = RT.randomSet(RT.getTemplate("charizard"));
+console.log(initTeam);
+
+function toSmogon(pkmn){
+    if(pkmn.nature === undefined){
+        pkmn.nature = "Hardy";
+    }
+    var buf = pkmn.name;
+    buf+= " @ " + pkmn.item + '\n';
+    buf+= "Ability: " + pkmn.ability + '\n';
+    buf+= "Level: " + pkmn.level + '\n';
+    buf+= "EVs: " + pkmn.evs.hp + " HP | " + pkmn.evs.atk + " Atk | " + pkmn.evs.def + " Def | " + pkmn.evs.spa + " SpA | " + pkmn.evs.spd + " SpD | " + pkmn.evs.spe + " Spe \n";
+    buf+= pkmn.nature + " Nature \n";
+    pkmn.moves.forEach(function(x){
+        buf+= "- " + x + " \n"
+    });
+    return buf;
+}
+
+console.log(toSmogon(initTeam));
 
 function pickOne(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -50,7 +75,7 @@ async function decide(state) {
     }
 }
 
-class Terminator {
+class Terminator extends AI {
     /**
      * Here's the main loop of your bot. `state` contains everything about the
      * current state of the game. Please read the documentation for more
@@ -60,33 +85,50 @@ class Terminator {
      *
      * @return {Decision}     A decision object.
      */
+    constructor() {
+        super();
+        this.ctr = -1;
+    }
+
+    team() {
+        return toSmogon(initTeam);
+    }
+
     decide(state) {
         return decide(state).then(function(model) {
             try {
-                if (model.myDefSwitch !== undefined && model.myDefSwitch[0] != null) {
-                    console.log("My Best Defensive Switch: ", model.myDefSwitch[0].id, "Max Damage Taken: ", model.myDefSwitch[1]);
-                    if (state.forceSwitch || state.teamPreview) {
-                        if (model.myDefSwitch !== undefined && model.myDefSwitch[0] != null) {
-                            return new SWITCH(model.myDefSwitch[0]);
-                        } else {
-                            console.log(chalk.green("BUG?"));
-                            return useRandom(state);
+                console.log("getData: ", model.getData(state));
+                console.log("\n");
+                if (model.myOffSwitch !== undefined && model.myOffSwitch != null) {
+                    console.log(chalk.green("My Best Offensive Switch: "), model.myOffSwitch.id, "Max Damage Done: ", model.myOffSwitch.maxDmg)[0];
+                }
+                if (state.forceSwitch || state.teamPreview) {
+                    if (model.myOffSwitch !== undefined && model.myOffSwitch != null) {
+                        console.log(chalk.green("My Best Offensive Switch: "), model.myOffSwitch.id, "Max Damage Done: ", model.myOffSwitch.maxDmg[0]);
+                        return new SWITCH(model.myOffSwitch);
+                    } else if (model.myDefSwitch !== undefined && model.myDefSwitch.minMaxDmg != null) {
+                        console.log("My Best Defensive Switch: ", model.myDefSwitch.id, "Max Damage Taken: ", model.myDefSwitch.minMaxDmg[15]);
+                        return new SWITCH(model.myDefSwitch);
+                    } else {
+                        console.log(chalk.green("BUG?"));
+                        return useRandom(state);
+                    }
+                }
+
+                if (model.myActive.bestDamage !== undefined && model.myActive.bestDamage != null && model.myActive.bestDamage.totalDamage[0] <= model.opponentActive.hp) {
+                    if (model.opponentActive.bestDamage !== undefined && model.opponentActive.bestDamage !== undefined && model.opponentActive.bestDamage != null) {
+                        console.log("Opponent's Best Damage Move: ", model.opponentActive.bestDamage.id, ": ", model.opponentActive.bestDamage.totalDamage[15]);
+                        if (model.myDefSwitch !== undefined && model.myDefSwitch != null && model.myDefSwitch.minMaxDmg[15] && model.opponentActive.bestDamage.totalDamage[0] > model.myDefSwitch.minMaxDmg[15] * 2) {
+                            console.log("model.myDefSwitch: ", model.myDefSwitch.id, ": ", model.myDefSwitch.minMaxDmg[15]);
+                            return new SWITCH(model.myDefSwitch);
                         }
                     }
                 }
 
-                if (model.opponent.bestDamage !== undefined && model.opponent.bestDamage[0] !== undefined && model.opponent.bestDamage[0] != null) {
-                    console.log("Opponent's Best Damage Move: ", model.opponent.bestDamage[0].id, ": ", model.opponent.bestDamage[1]);
-                    //console.log("model.myDefSwitch[0]: ",model.myDefSwitch);
-                    if (model.myDefSwitch[1] && model.opponent.bestDamage[1] > model.myDefSwitch[1] * 2) {
-                        return new SWITCH(model.myDefSwitch[0]);
-                    }
-                }
 
-
-                if (model.myBestDamage !== undefined && model.myBestDamage[0] != null) {
-                    console.log("My Best Damage Move: ", model.myBestDamage[0].id, ": ", model.myBestDamage[1]);
-                    return new MOVE(model.myBestDamage[0].id);
+                if (model.myActive.bestDamage.id !== undefined && model.myActive.bestDamage != null) {
+                    console.log("My Best Damage Move: ", model.myActive.bestDamage.id, ": ", model.myActive.bestDamage.totalDamage[0]);
+                    return new MOVE(model.myActive.bestDamage.id);
                 }
 
                 return useRandom(state);
